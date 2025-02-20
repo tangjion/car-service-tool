@@ -1,0 +1,42 @@
+{
+  "name": "Car Service Tool",
+  "description": "一些实用的小工具，提高效率",
+  "version": "1.0",
+  "manifest_version": 3,
+  // "background": {
+  //   "service_worker": "background.js"
+  // },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "/images/cartool16.png",
+      "32": "/images/cartool32.png",
+      "48": "/images/cartool48.png",
+      "128": "/images/cartool128.png"
+    }
+  },
+  "icons": {
+    "16": "/images/cartool16.png",
+    "32": "/images/cartool32.png",
+    "48": "/images/cartool48.png",
+    "128": "/images/cartool128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.klook.com/*",
+        "https://*.klook.io/*",
+        "https://*.klooktest.com/*",
+        "http://localhost:3000/*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
+  // "options_page": "options.html"
+}
