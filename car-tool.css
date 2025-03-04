@@ -10,14 +10,31 @@ ul li {
 }
 
 .tool-wrap {
-  width: 200px;
+  width: 400px;
   padding: 20px;
+  display: flex;
+}
+
+.left {
+  width: 180px;
+  border-right: 1px solid #ccc;
+  padding-right: 10px;
+}
+
+.right {
+  width: 180px;
+  padding-left: 10px;
 }
 
 .tool-item {
   border-bottom: 1px solid #ccc;
   padding-bottom: 10px;
   margin-bottom: 10px;
+  margin-top: 10px;
+
+  &:first-child {
+    margin-top: 0;
+  }
 }
 
 .item-title {
@@ -105,4 +122,35 @@ ul li {
   border-radius: 6px;
   color: white;
   cursor: pointer;
+}
+
+.item-input {
+  margin-top: 10px;
+}
+
+.item-input input {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 5px;
+}
+
+.item-btn-wrap {
+  display: flex;
+  justify-content: space-between;
+}
+
+.item-input.inline {
+  height: 50px;
+  display: flex;
+  align-items: center;
+}
+
+.inline input {
+  width: 40%;
+}
+
+.inline .item-btn {
+  margin-top: 0;
+  margin-left: 5px;
 }

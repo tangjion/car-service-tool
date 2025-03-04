@@ -27,6 +27,8 @@
 // );
 chrome.storage.sync.get(['code'], ({ code }) => {
   document.getElementById(code).classList.add('active')
+  const sourceCodeInput = document.getElementById('sourceCode');
+  sourceCodeInput.value = code;
 });
 
 chrome.storage.sync.get(['isIhtDebug'], ({ isIhtDebug }) => {
@@ -69,11 +71,29 @@ chrome.storage.sync.get(['isGuestCheckout'], ({ isGuestCheckout }) => {
   }
 });
 
+chrome.storage.sync.get(['keplerId'], ({ keplerId }) => {
+  if(keplerId) {
+    const keplerIdInput = document.getElementById('keplerId');
+    keplerIdInput.value = keplerId;
+    // document.getElementById('showGuestCheckout').classList.add('checked')
+  } else {
+    // document.getElementById('showGuestCheckout').classList.remove('checked')
+  }
+});
+
 chrome.storage.sync.get(['isLogDebug'], ({ isLogDebug }) => {
   if(isLogDebug) {
     document.getElementById('logDebug').classList.add('checked')
   } else {
     document.getElementById('logDebug').classList.remove('checked')
+  }
+});
+
+chrome.storage.sync.get(['isSsr'], ({ isSsr }) => {
+  if(isSsr) {
+    document.getElementById('switchSsr').classList.add('checked')
+  } else {
+    document.getElementById('switchSsr').classList.remove('checked')
   }
 });
 
@@ -94,6 +114,7 @@ chrome.storage.sync.get(['isLogDebug'], ({ isLogDebug }) => {
 
 // 修改客源国
 let countryEle = document.querySelectorAll(".item-list li");
+let setSourceCode = document.getElementById('setSourceCode')
 for(let i = 0,len = countryEle.length; i < len; i++) {
   countryEle[i].addEventListener("click", async () => {
     const $this = countryEle[i]
@@ -111,6 +132,21 @@ for(let i = 0,len = countryEle.length; i < len; i++) {
     });
   })
 }
+setSourceCode.addEventListener("click", async () => {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  // 获取 客源国 输入框的值
+  const sourceCodeInput = document.getElementById('sourceCode');
+  const newSourceCode = sourceCodeInput.value;
+  if (newSourceCode) {
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      function: changeSourceCountrysc,
+      args: [newSourceCode, tab]
+    });
+  } else {
+    alert('请输入客源国');
+  }
+});
 
 function changeSourceCountrysc(sc) {
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
@@ -217,6 +253,48 @@ logDebugBtn.addEventListener("click", async () => {
   });
 })
 
+// 切换到klook-web/ssrcarrental服务
+let switchSsrBtn = document.getElementById('switchSsr')
+switchSsrBtn.addEventListener("click", async () => {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const isChecked = switchSsrBtn.classList.contains('checked')
+  !isChecked ? switchSsrBtn.classList.add('checked') : switchSsrBtn.classList.remove('checked')
+  chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: addTypeToUrl,
+    args: [!isChecked]
+  });
+})
+
+// 设置keplerID
+let setKeplerIdBtn = document.getElementById('setKeplerId')
+setKeplerIdBtn.addEventListener("click", async () => {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  // 获取 keplerId 输入框的值
+  const keplerIdInput = document.getElementById('keplerId');
+  const newKeplerId = keplerIdInput.value;
+  if (newKeplerId) {
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      function: setKeplerId,
+      args: [newKeplerId, tab]
+    });
+  } else {
+    alert('请输入keplerID');
+  }
+});
+
+// 清空keplerID
+let resetKeplerIdBtn = document.getElementById('resetKeplerId')
+resetKeplerIdBtn.addEventListener("click", async () => {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: resetKeplerId,
+    args: [true, tab]
+  });
+})
+
 function addTextIdToUrl(bool) {
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
   const url = window.location.href
@@ -259,19 +337,6 @@ function addGuestCheckoutToUrl(bool, tab) {
   }
 }
 
-// 复制cookie里面的_pt值到剪贴板
-function copyPt() {
-  console.log('copyPt');
-  const cookie = document.cookie;
-  const reg = /_pt=([^;]+)/
-  const pt = cookie.match(reg)[1]
-  navigator.clipboard.writeText(pt).then(function() {
-    alert('复制成功')
-  }, function() {
-    alert('复制失败')
-  });
-}
-
 // 打开后端日志功能
 function openLogDebug(bool) {
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
@@ -283,8 +348,52 @@ function openLogDebug(bool) {
     } else {
       document.cookie = 'log-debug=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     }
+    window.location.href = url
   }
-  window.location.href = url
+}
+
+function addTypeToUrl(bool) {
+  const reg = /^(https:\/\/.+\.klooktest.+\/)/
+  const url = window.location.href
+  if(reg.test(url)) {
+    if (bool) {
+      if (url.includes('?') && !url.includes('type=')) {
+        window.location.href = url + '&type=new'
+      } else if (!url.includes('?') && !url.includes('type=')) {
+        window.location.href = url + '?type=new'
+      }
+    } else {
+      if (url.includes('?type=')) {
+        window.location.href = url.replace('?type=new', '')
+      } else if (url.includes('&type=')) {
+        window.location.href = url.replace('&type=new', '')
+      }
+    }
+  }
+}
+
+// 设置keplerID
+function setKeplerId(newKeplerId) {
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
+  const url = window.location.href;
+  if (reg.test(url)) {
+    if (newKeplerId) {
+      document.cookie = `kepler_id=${newKeplerId}; max-age=1800; path=/;`;
+      window.location.href = url;
+    } else {
+      alert('请输入keplerID');
+    }
+  }
+}
+
+// 清空keplerID
+function resetKeplerId(bool) {
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
+  const url = window.location.href
+  if(reg.test(url)) {
+    document.cookie = 'kepler_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    window.location.href = url
+  }
 }
 
 // document.addEventListener("DOMContentLoaded", function() {
