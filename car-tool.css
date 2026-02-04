@@ -135,6 +135,18 @@ ul li {
   padding: 5px;
 }
 
+.item-input select {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 5px;
+}
+
+.item-select-title {
+  font-size: 12px;
+  margin: 5px 0;
+}
+
 .item-btn-wrap {
   display: flex;
   justify-content: space-between;

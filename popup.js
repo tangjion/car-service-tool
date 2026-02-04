@@ -47,13 +47,13 @@ chrome.storage.sync.get(['isGalileoDebug'], ({ isGalileoDebug }) => {
   }
 });
 
-chrome.storage.sync.get(['isGalileoDebug'], ({ isGalileoDebug }) => {
-  if(isGalileoDebug) {
-    document.getElementById('openGalileo').classList.add('checked')
-  } else {
-    document.getElementById('openGalileo').classList.remove('checked')
-  }
-});
+// chrome.storage.sync.get(['isGalileoDebug'], ({ isGalileoDebug }) => {
+//   if(isGalileoDebug) {
+//     document.getElementById('openGalileo').classList.add('checked')
+//   } else {
+//     document.getElementById('openGalileo').classList.remove('checked')
+//   }
+// });
 
 chrome.storage.sync.get(['isTextId'], ({ isTextId }) => {
   if(isTextId) {
@@ -74,6 +74,7 @@ chrome.storage.sync.get(['isGuestCheckout'], ({ isGuestCheckout }) => {
 chrome.storage.sync.get(['keplerId'], ({ keplerId }) => {
   if(keplerId) {
     const keplerIdInput = document.getElementById('keplerId');
+    let keplerIdSelect = document.getElementById('keplerIdSelect')
     keplerIdInput.value = keplerId;
     // document.getElementById('showGuestCheckout').classList.add('checked')
   } else {
@@ -86,6 +87,14 @@ chrome.storage.sync.get(['isLogDebug'], ({ isLogDebug }) => {
     document.getElementById('logDebug').classList.add('checked')
   } else {
     document.getElementById('logDebug').classList.remove('checked')
+  }
+});
+
+chrome.storage.sync.get(['isReportLogDebug'], ({ isReportLogDebug }) => {
+  if(isReportLogDebug) {
+    document.getElementById('openReportLog').classList.add('checked')
+  } else {
+    document.getElementById('openReportLog').classList.remove('checked')
   }
 });
 
@@ -130,6 +139,11 @@ for(let i = 0,len = countryEle.length; i < len; i++) {
       function: changeSourceCountrysc,
       args: [sc]
     });
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      function: setKlkRdc,
+      args: [sc]
+    });
   })
 }
 setSourceCode.addEventListener("click", async () => {
@@ -142,6 +156,11 @@ setSourceCode.addEventListener("click", async () => {
       target: { tabId: tab.id },
       function: changeSourceCountrysc,
       args: [newSourceCode, tab]
+    });
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      function: setKlkRdc,
+      args: [newSourceCode]
     });
   } else {
     alert('请输入客源国');
@@ -195,6 +214,7 @@ galileoBtn.addEventListener("click", async () => {
   });
 })
 
+// 开启galileo日志debug模式
 function changeGalileoLog(bool) {
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
   const url = window.location.href
@@ -266,6 +286,36 @@ switchSsrBtn.addEventListener("click", async () => {
   });
 })
 
+// 开启report日志
+let reportLogBtn = document.getElementById('openReportLog')
+reportLogBtn.addEventListener("click", async () => {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const isChecked = reportLogBtn.classList.contains('checked')
+  !isChecked ? reportLogBtn.classList.add('checked') : reportLogBtn.classList.remove('checked')
+  chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: changeReportLog,
+    args: [!isChecked]
+  });
+})
+
+function changeReportLog(bool) {
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
+  const url = window.location.href
+  if(reg.test(url)){
+    window.localStorage.setItem('__clientReport:debug', bool);
+    window.location.reload();
+  }
+}
+
+// 切换AB实验
+let keplerIdSelect = document.getElementById('keplerIdSelect')
+let keplerIdInput = document.getElementById('keplerId');
+keplerIdSelect.addEventListener("change", (event) => {
+  const value = event.target.value;
+  keplerIdInput.value = value;
+})
+
 // 设置keplerID
 let setKeplerIdBtn = document.getElementById('setKeplerId')
 setKeplerIdBtn.addEventListener("click", async () => {
@@ -295,6 +345,54 @@ resetKeplerIdBtn.addEventListener("click", async () => {
   });
 })
 
+// 随机生成香港身份证
+let generateHKIdBtn = document.getElementById('generateHKId')
+generateHKIdBtn.addEventListener("click", async () => {
+  generateHKID()
+})
+
+function generateHKID() {
+  // 生成第一个字母（通常是Z）
+  const firstLetter = 'Z';
+  // 生成第二个字母（这里我们用Q-U作为示例）
+  const secondLetters = ['Q', 'R', 'S', 'T', 'U'];
+  const secondLetter = secondLetters[Math.floor(Math.random() * secondLetters.length)];
+  // 生成6位随机数字
+  const numbers = Array.from({length: 6}, () => Math.floor(Math.random() * 10)).join('');
+  // 计算校验码
+  const checkDigit = calculateCheckDigit(firstLetter, secondLetter, numbers);
+  const hkId = document.getElementById('hkId');
+  const value = `${firstLetter}${secondLetter}${numbers}(${checkDigit})`;
+  hkId.value = value
+  // 将香港身份证号码复制到剪贴板
+  try {
+    navigator.clipboard.writeText(value).then(() => {
+    }).catch(err => {
+      alert('复制到剪贴板失败，请手动复制');
+    });
+  } catch (error) {
+    console.error('复制到剪贴板时出错:', error);
+    alert('复制到剪贴板失败，请手动复制');
+  }
+}
+
+function calculateCheckDigit(firstLetter, secondLetter, numbers) {
+  // 转换字母为对应的数值（A=10, B=11, ..., Z=35）
+  const firstValue = firstLetter.charCodeAt(0) - 55;  // Z = 35
+  const secondValue = secondLetter.charCodeAt(0) - 55;
+  // 权重值
+  const weights = [9, 8, 7, 6, 5, 4, 3, 2];
+  // 计算总和
+  let sum = firstValue * weights[0] + secondValue * weights[1];
+  // 加上数字部分的权重计算
+  for (let i = 0; i < 6; i++) {
+      sum += parseInt(numbers[i]) * weights[i + 2];
+  }
+  // 计算校验码
+  const remainder = sum % 11;
+  return remainder === 0 ? 0 : 11 - remainder;
+}
+
 function addTextIdToUrl(bool) {
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
   const url = window.location.href
@@ -315,6 +413,7 @@ function addTextIdToUrl(bool) {
   }
 }
 
+// url添加guest参数
 function addGuestCheckoutToUrl(bool, tab) {
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
   const url = window.location.href
@@ -347,6 +446,21 @@ function openLogDebug(bool) {
       document.cookie = 'log-debug=test_car_rental; max-age=1800; path=/;';
     } else {
       document.cookie = 'log-debug=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    }
+    window.location.href = url
+  }
+}
+
+// 设置klk-rdc
+function setKlkRdc(code) {
+  console.log('000000')
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
+  const url = window.location.href
+  const ONE_DAY = 86400 * 1000
+  if(reg.test(url)) {
+    if (code) {
+      // 在cookie中添加一个log-debug字段，值为test_car_rental,有效期为30分钟
+      document.cookie = `transfer-user-residence=${code}; max-age=${ONE_DAY}; path=/;`;
     }
     window.location.href = url
   }

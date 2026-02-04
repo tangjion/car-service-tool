@@ -101,6 +101,12 @@
         </div>
         <div class="tool-item">
           <div class="item-title">
+            <div class="item-checkbox" id="openReportLog"></div>
+            <span>report log debug</span>
+          </div>
+        </div>
+        <div class="tool-item">
+          <div class="item-title">
             <div class="item-checkbox" id="switchSsr"></div>
             <span>切换ssr服务</span>
           </div>
@@ -114,9 +120,39 @@
           </p>
           <div class="item-input">
             <input type="text" id="keplerId" placeholder="Keplerid">
+            <div class="item-select-title">请选择AB实验:</div>
+            <select id="keplerIdSelect">
+              <option value="">请选择AB实验</option>
+              <option value="CR_insurance_migration-Control">insurance-control</option>
+              <option value="CR_insurance_migration-Test">insurance-test</option>
+              <option value="CR_DetailPage_Revamp-control">DP_Revamp-control</option>
+              <option value="CR_DetailPage_Revamp-test">DP_Revamp-test</option>
+              <option value="US_TPL-control">DP_TPL-control</option>
+              <option value="US_TPL-test">DP_TPL-test</option>
+              <option value="CR_Mainsite_SCOP-control">SCOP-control</option>
+              <option value="CR_Mainsite_SCOP-test">SCOP-test</option>
+              <option value="CR_MSE_SCOP-control">SCOP_MSE-control</option>
+              <option value="CR_MSE_SCOP-test">SCOP_MSE-test</option>
+              <option value="PAT_SCOP-control">PAT_SCOP-control</option>
+              <option value="PAT_SCOP-test">PAT_SCOP-test</option>
+              <option value="CarRental_SRP_simplifed-control">CR_SRP_simplifed-control</option>
+              <option value="CarRental_SRP_simplifed-test">CR_SRP_simplifed-test</option>
+            </select>
             <div class="item-btn-wrap">
               <div id="setKeplerId" class="item-btn">设置Keplerid</div>
               <div id="resetKeplerId" class="item-btn">刷新Keplerid</div>
+            </div>
+          </div>
+        </div>
+        <div class="tool-item">
+          <p class="item-title">
+            <img src="images/closed.png" width="20">
+            <span>随机生成香港身份证</span>
+          </p>
+          <div class="item-input">
+            <input type="text" id="hkId" placeholder="HKID">
+            <div class="item-btn-wrap">
+              <div id="generateHKId" class="item-btn">生成香港身份证</div>
             </div>
           </div>
         </div>
