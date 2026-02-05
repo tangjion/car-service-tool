@@ -25,11 +25,31 @@
 //     }
 //   }
 // );
-chrome.storage.sync.get(['code'], ({ code }) => {
-  document.getElementById(code).classList.add('active')
-  const sourceCodeInput = document.getElementById('sourceCode');
-  sourceCodeInput.value = code;
-});
+// 从 cookie 读取 transfer-user-residence 并设置选中状态
+async function initSourceCountry() {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: getTransferUserResidenceFromCookie
+  });
+  
+  const code = results && results[0] && results[0].result ? results[0].result : '';
+  if (code) {
+    const el = document.getElementById(code);
+    if (el) el.classList.add('active');
+    const sourceCodeInput = document.getElementById('sourceCode');
+    sourceCodeInput.value = code;
+  }
+}
+
+function getTransferUserResidenceFromCookie() {
+  const match = document.cookie.match(/transfer-user-residence=([^;]+)/);
+  return match ? match[1] : '';
+}
+
+initSourceCountry();
 
 chrome.storage.sync.get(['isIhtDebug'], ({ isIhtDebug }) => {
   if(isIhtDebug) {
@@ -171,10 +191,9 @@ function changeSourceCountrysc(sc) {
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
   const url = window.location.href
   if(reg.test(url)){
-    window.localStorage.setItem('carRentalCountry', JSON.stringify({
-      localData: sc,
-      expires: new Date().getTime() + 86400000
-    }));
+    // 设置 cookie 中的 transfer-user-residence 字段，有效期1天
+    const ONE_DAY = 86400;
+    document.cookie = `transfer-user-residence=${sc}; max-age=${ONE_DAY}; path=/;`;
     window.location.reload();
   }
 }
