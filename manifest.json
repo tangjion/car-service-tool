@@ -10,7 +10,15 @@
     "storage",
     "activeTab",
     "scripting",
-    "tabs"
+    "tabs",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess"
+  ],
+  "host_permissions": [
+    "https://*.klook.com/*",
+    "https://*.klook.io/*",
+    "https://*.klooktest.com/*",
+    "http://localhost:3000/*"
   ],
   "action": {
     "default_popup": "popup.html",

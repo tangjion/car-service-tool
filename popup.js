@@ -370,6 +370,152 @@ generateHKIdBtn.addEventListener("click", async () => {
   generateHKID()
 })
 
+// 设置请求头
+let setHeaderBtn = document.getElementById('setHeader')
+setHeaderBtn.addEventListener("click", async () => {
+  const headerName = document.getElementById('headerName').value.trim();
+  const headerValue = document.getElementById('headerValue').value;
+  if (!headerName) {
+    alert('请输入请求头名称');
+    return;
+  }
+  try {
+    await setCustomHeader(headerName, headerValue);
+    alert('请求头已设置，请刷新页面生效');
+  } catch (error) {
+    alert('设置失败: ' + error.message);
+  }
+});
+
+// 清除请求头
+let clearHeaderBtn = document.getElementById('clearHeader')
+clearHeaderBtn.addEventListener("click", async () => {
+  await clearCustomHeader();
+  document.getElementById('headerName').value = '';
+  document.getElementById('headerValue').value = '';
+  alert('请求头已清除');
+});
+
+// 设置自定义请求头
+async function setCustomHeader(headerName, headerValue) {
+  // 先清除旧规则
+  await clearCustomHeader();
+  
+  const resourceTypes = ['main_frame', 'sub_frame', 'xmlhttprequest', 'other'];
+  
+  // 添加新规则
+  const rules = [
+    {
+      id: 1,
+      priority: 1,
+      action: {
+        type: 'modifyHeaders',
+        requestHeaders: [
+          {
+            header: headerName,
+            operation: 'set',
+            value: headerValue
+          }
+        ]
+      },
+      condition: {
+        urlFilter: '||klook.com',
+        resourceTypes: resourceTypes
+      }
+    },
+    {
+      id: 2,
+      priority: 1,
+      action: {
+        type: 'modifyHeaders',
+        requestHeaders: [
+          {
+            header: headerName,
+            operation: 'set',
+            value: headerValue
+          }
+        ]
+      },
+      condition: {
+        urlFilter: '||klook.io',
+        resourceTypes: resourceTypes
+      }
+    },
+    {
+      id: 3,
+      priority: 1,
+      action: {
+        type: 'modifyHeaders',
+        requestHeaders: [
+          {
+            header: headerName,
+            operation: 'set',
+            value: headerValue
+          }
+        ]
+      },
+      condition: {
+        urlFilter: '||klooktest.com',
+        resourceTypes: resourceTypes
+      }
+    },
+    {
+      id: 4,
+      priority: 1,
+      action: {
+        type: 'modifyHeaders',
+        requestHeaders: [
+          {
+            header: headerName,
+            operation: 'set',
+            value: headerValue
+          }
+        ]
+      },
+      condition: {
+        urlFilter: '|http://localhost:3000',
+        resourceTypes: resourceTypes
+      }
+    }
+  ];
+  
+  try {
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      addRules: rules,
+      removeRuleIds: []
+    });
+    console.log('规则设置成功:', rules);
+  } catch (error) {
+    console.error('设置规则失败:', error);
+    throw error;
+  }
+  
+  // 保存当前设置
+  await chrome.storage.sync.set({ customHeader: { name: headerName, value: headerValue } });
+}
+
+// 清除自定义请求头
+async function clearCustomHeader() {
+  try {
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      addRules: [],
+      removeRuleIds: [1, 2, 3, 4]
+    });
+    console.log('规则已清除');
+  } catch (error) {
+    console.error('清除规则失败:', error);
+  }
+  chrome.storage.sync.remove('customHeader');
+}
+
+// 初始化请求头设置
+chrome.storage.sync.get(['customHeader'], ({ customHeader }) => {
+  if (customHeader) {
+    document.getElementById('headerName').value = customHeader.name || '';
+    document.getElementById('headerValue').value = customHeader.value || '';
+  }
+});
+
 function generateHKID() {
   // 生成第一个字母（通常是Z）
   const firstLetter = 'Z';
