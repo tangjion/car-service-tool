@@ -1,0 +1,53 @@
+{
+  "experiments": [
+    {
+      "group": "Insurance",
+      "variants": [
+        { "label": "insurance · control", "value": "CR_insurance_migration-Control" },
+        { "label": "insurance · test",    "value": "CR_insurance_migration-Test" }
+      ]
+    },
+    {
+      "group": "Detail Page Revamp",
+      "variants": [
+        { "label": "DP_Revamp · control", "value": "CR_DetailPage_Revamp-control" },
+        { "label": "DP_Revamp · test",    "value": "CR_DetailPage_Revamp-test" }
+      ]
+    },
+    {
+      "group": "TPL",
+      "variants": [
+        { "label": "DP_TPL · control", "value": "US_TPL-control" },
+        { "label": "DP_TPL · test",    "value": "US_TPL-test" }
+      ]
+    },
+    {
+      "group": "SCOP Mainsite",
+      "variants": [
+        { "label": "SCOP · control", "value": "CR_Mainsite_SCOP-control" },
+        { "label": "SCOP · test",    "value": "CR_Mainsite_SCOP-test" }
+      ]
+    },
+    {
+      "group": "SCOP MSE",
+      "variants": [
+        { "label": "SCOP_MSE · control", "value": "CR_MSE_SCOP-control" },
+        { "label": "SCOP_MSE · test",    "value": "CR_MSE_SCOP-test" }
+      ]
+    },
+    {
+      "group": "PAT SCOP",
+      "variants": [
+        { "label": "PAT_SCOP · control", "value": "PAT_SCOP-control" },
+        { "label": "PAT_SCOP · test",    "value": "PAT_SCOP-test" }
+      ]
+    },
+    {
+      "group": "SRP Simplified",
+      "variants": [
+        { "label": "CR_SRP · control", "value": "CarRental_SRP_simplifed-control" },
+        { "label": "CR_SRP · test",    "value": "CarRental_SRP_simplifed-test" }
+      ]
+    }
+  ]
+}

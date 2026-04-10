@@ -18,7 +18,8 @@
     "https://*.klook.com/*",
     "https://*.klook.io/*",
     "https://*.klooktest.com/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "http://www.xiaoqi.fan/*"
   ],
   "action": {
     "default_popup": "popup.html",

@@ -327,6 +327,30 @@ function changeReportLog(bool) {
   }
 }
 
+// 从远程配置文件加载AB实验列表
+async function loadExperiments() {
+  const select = document.getElementById('keplerIdSelect');
+  try {
+    const res = await fetch('http://www.xiaoqi.fan/experiments.json');
+    const { experiments } = await res.json();
+    for (const { group, variants } of experiments) {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = group;
+      for (const { label, value } of variants) {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label;
+        optgroup.appendChild(opt);
+      }
+      select.appendChild(optgroup);
+    }
+  } catch (e) {
+    console.error('Failed to load experiments.json:', e);
+  }
+}
+
+loadExperiments();
+
 // 切换AB实验
 let keplerIdSelect = document.getElementById('keplerIdSelect')
 let keplerIdInput = document.getElementById('keplerId');
