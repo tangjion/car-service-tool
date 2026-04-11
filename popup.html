@@ -123,8 +123,10 @@
             <span>REQUEST HEADERS</span>
           </p>
           <div class="item-input">
-            <input type="text" id="headerName" placeholder="Header name (e.g. X-Custom)">
-            <input type="text" id="headerValue" placeholder="Header value">
+            <input type="text" id="headerName" value="x-klook-mesh-lane" readonly>
+            <select id="headerValue">
+              <option value="">-- 请选择通道 --</option>
+            </select>
             <div class="item-btn-wrap">
               <div id="setHeader" class="item-btn">SET</div>
               <div id="clearHeader" class="item-btn">CLEAR</div>

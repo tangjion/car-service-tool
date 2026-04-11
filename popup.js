@@ -327,12 +327,15 @@ function changeReportLog(bool) {
   }
 }
 
-// 从远程配置文件加载AB实验列表
-async function loadExperiments() {
-  const select = document.getElementById('keplerIdSelect');
+// 从远程配置文件加载实验列表和 meshLane
+async function loadConfig() {
+  const experimentSelect = document.getElementById('keplerIdSelect');
+  const headerValueSelect = document.getElementById('headerValue');
   try {
-    const res = await fetch('http://www.xiaoqi.fan/experiments.json');
-    const { experiments } = await res.json();
+    const res = await fetch('http://www.xiaoqi.fan/config.json');
+    const { experiments, meshLane } = await res.json();
+
+    // 填充 AB 实验
     for (const { group, variants } of experiments) {
       const optgroup = document.createElement('optgroup');
       optgroup.label = group;
@@ -342,14 +345,30 @@ async function loadExperiments() {
         opt.textContent = label;
         optgroup.appendChild(opt);
       }
-      select.appendChild(optgroup);
+      experimentSelect.appendChild(optgroup);
     }
+
+    // 填充 meshLane 通道
+    for (const { name, value } of meshLane) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = `${name} · ${value}`;
+      headerValueSelect.appendChild(opt);
+    }
+
+    // 恢复已保存的请求头设置（需在选项渲染完成后再赋值）
+    chrome.storage.sync.get(['customHeader'], ({ customHeader }) => {
+      if (customHeader) {
+        document.getElementById('headerName').value = customHeader.name || '';
+        headerValueSelect.value = customHeader.value || '';
+      }
+    });
   } catch (e) {
-    console.error('Failed to load experiments.json:', e);
+    console.error('Failed to load config.json:', e);
   }
 }
 
-loadExperiments();
+loadConfig();
 
 // 切换AB实验
 let keplerIdSelect = document.getElementById('keplerIdSelect')
@@ -405,7 +424,8 @@ setHeaderBtn.addEventListener("click", async () => {
   }
   try {
     await setCustomHeader(headerName, headerValue);
-    alert('请求头已设置，请刷新页面生效');
+    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    chrome.tabs.reload(tab.id);
   } catch (error) {
     alert('设置失败: ' + error.message);
   }
@@ -532,13 +552,7 @@ async function clearCustomHeader() {
   chrome.storage.sync.remove('customHeader');
 }
 
-// 初始化请求头设置
-chrome.storage.sync.get(['customHeader'], ({ customHeader }) => {
-  if (customHeader) {
-    document.getElementById('headerName').value = customHeader.name || '';
-    document.getElementById('headerValue').value = customHeader.value || '';
-  }
-});
+// 请求头初始化已移入 loadConfig()，在 meshLane 选项渲染后执行
 
 function generateHKID() {
   // 生成第一个字母（通常是Z）

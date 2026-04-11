@@ -49,5 +49,13 @@
         { "label": "CR_SRP · test",    "value": "CarRental_SRP_simplifed-test" }
       ]
     }
+  ],
+  "meshLane": [
+    { "name": "默认通道",   "value": "f1000" },
+    { "name": "预发通道",   "value": "f1001" },
+    { "name": "测试通道A",  "value": "f1223" },
+    { "name": "测试通道B",  "value": "f1224" },
+    { "name": "灰度通道",   "value": "f1500" },
+    { "name": "压测通道",   "value": "f2001" }
   ]
 }
