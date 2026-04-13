@@ -35,7 +35,8 @@ async function initSourceCountry() {
     function: getTransferUserResidenceFromCookie
   });
   
-  const code = results && results[0] && results[0].result ? results[0].result : '';
+  const raw = results && results[0] && results[0].result ? results[0].result : '';
+  const code = raw.startsWith('2_') ? raw.slice(2) : raw;
   if (code) {
     const el = document.getElementById(code);
     if (el) el.classList.add('active');
@@ -193,7 +194,7 @@ function changeSourceCountrysc(sc) {
   if(reg.test(url)){
     // 设置 cookie 中的 transfer-user-residence 字段，有效期1天
     const ONE_DAY = 86400;
-    document.cookie = `transfer-user-residence=${sc}; max-age=${ONE_DAY}; path=/;`;
+    document.cookie = `transfer-user-residence=2_${sc}; max-age=${ONE_DAY}; path=/;`;
     window.location.reload();
   }
 }
@@ -663,7 +664,7 @@ function setKlkRdc(code) {
   if(reg.test(url)) {
     if (code) {
       // 在cookie中添加一个log-debug字段，值为test_car_rental,有效期为30分钟
-      document.cookie = `transfer-user-residence=${code}; max-age=${ONE_DAY}; path=/;`;
+      document.cookie = `transfer-user-residence=2_${code}; max-age=${ONE_DAY}; path=/;`;
     }
     window.location.href = url
   }
