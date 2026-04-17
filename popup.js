@@ -270,15 +270,96 @@ guestCheckoutBtn.addEventListener("click", async () => {
   });
 })
 
-// let copyPtBtn = document.getElementById('copyPt')
-// copyPtBtn.addEventListener("click", async () => {
-//   let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-//   chrome.scripting.executeScript({
-//     target: { tabId: tab.id },
-//     function: copyPt,
-//     args: [true, tab]
-//   });
-// })
+// 恢复上次保存的 _pt 值
+chrome.storage.sync.get(['savedPtValue'], ({ savedPtValue }) => {
+  if (savedPtValue) {
+    document.getElementById('ptValue').value = savedPtValue;
+  }
+});
+
+// 获取 _pt cookie 并复制
+let getPtTokenBtn = document.getElementById('getPtToken')
+getPtTokenBtn.addEventListener("click", async () => {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
+  if (!reg.test(tab.url)) {
+    document.getElementById('ptValue').value = '';
+    document.getElementById('ptValue').placeholder = '仅支持 Klook 域名';
+    return;
+  }
+  try {
+    const cookie = await chrome.cookies.get({ url: tab.url, name: '_pt' });
+    const ptValue = cookie ? cookie.value : '';
+    const ptInput = document.getElementById('ptValue');
+    if (!ptValue) {
+      ptInput.value = '';
+      ptInput.placeholder = '未找到 _pt cookie';
+      return;
+    }
+    ptInput.value = ptValue;
+    chrome.storage.sync.set({ savedPtValue: ptValue });
+    await navigator.clipboard.writeText(ptValue);
+    getPtTokenBtn.textContent = 'COPIED!';
+    setTimeout(() => { getPtTokenBtn.textContent = 'GET'; }, 1500);
+  } catch (error) {
+    console.error('获取 _pt cookie 失败:', error);
+    alert('获取 _pt cookie 失败: ' + error.message);
+  }
+})
+
+// 设置 _pt cookie
+let setPtTokenBtn = document.getElementById('setPtToken')
+setPtTokenBtn.addEventListener("click", async () => {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
+  if (!reg.test(tab.url)) {
+    alert('仅支持 Klook 域名');
+    return;
+  }
+  const ptInput = document.getElementById('ptValue');
+  const newPt = ptInput.value.trim();
+  if (!newPt) {
+    alert('请输入 _pt 值');
+    return;
+  }
+  try {
+    const url = new URL(tab.url);
+    await chrome.cookies.set({
+      url: url.origin,
+      name: '_pt',
+      value: newPt,
+      path: '/',
+      httpOnly: true,
+      secure: url.protocol === 'https:'
+    });
+    setPtTokenBtn.textContent = 'DONE!';
+    chrome.tabs.reload(tab.id);
+  } catch (error) {
+    console.error('设置 _pt cookie 失败:', error);
+    alert('设置 _pt cookie 失败: ' + error.message);
+  }
+})
+
+// 清空 _pt cookie
+let clearPtTokenBtn = document.getElementById('clearPtToken')
+clearPtTokenBtn.addEventListener("click", async () => {
+  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
+  if (!reg.test(tab.url)) {
+    alert('仅支持 Klook 域名');
+    return;
+  }
+  try {
+    const url = new URL(tab.url);
+    await chrome.cookies.remove({ url: url.origin + '/', name: '_pt' });
+    document.getElementById('ptValue').value = '';
+    chrome.storage.sync.remove('savedPtValue');
+    chrome.tabs.reload(tab.id);
+  } catch (error) {
+    console.error('清空 _pt cookie 失败:', error);
+    alert('清空 _pt cookie 失败: ' + error.message);
+  }
+})
 
 // 切换到log debug模式
 let logDebugBtn = document.getElementById('logDebug')
@@ -518,7 +599,7 @@ async function setCustomHeader(headerName, headerValue) {
         ]
       },
       condition: {
-        urlFilter: '|http://localhost:3000',
+        urlFilter: '|http://localhost',
         resourceTypes: resourceTypes
       }
     }
