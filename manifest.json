@@ -3,9 +3,6 @@
   "description": "一些实用的小工具，提高效率",
   "version": "1.0",
   "manifest_version": 3,
-  // "background": {
-  //   "service_worker": "background.js"
-  // },
   "permissions": [
     "storage",
     "activeTab",
@@ -19,7 +16,7 @@
     "https://*.klook.com/*",
     "https://*.klook.io/*",
     "https://*.klooktest.com/*",
-    "http://localhost*",
+    "http://localhost/*",
     "http://www.xiaoqi.fan/*"
   ],
   "action": {

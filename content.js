@@ -1,12 +1,19 @@
-const scode = JSON.parse(window.localStorage.getItem('carRentalCountry')).localData || 'HK'
-const isIht = JSON.parse(window.localStorage.getItem('__inhouse:debug'))
+const carRentalCountry = window.localStorage.getItem('carRentalCountry')
+const scode = carRentalCountry ? JSON.parse(carRentalCountry).localData || 'HK' : 'HK'
+
+const inHouseDebug = window.localStorage.getItem('__inhouse:debug')
+const isIht = inHouseDebug ? JSON.parse(inHouseDebug) : null
+
 const isGalileo = window.localStorage.getItem('__galileo_debug')
 const urlParams = new URLSearchParams(window.location.search);
 const isLog = document.cookie.includes('log-debug=test_car_rental')
-const isReportLog = JSON.parse(window.localStorage.getItem('__clientReport:debug'))
+
+const clientReport = window.localStorage.getItem('__clientReport:debug')
+const isReportLog = clientReport ? JSON.parse(clientReport) : null
+
 const isGuestCheckout = document.cookie.includes('util_name=guest_checkout')
-const keplerId = document.cookie.split(';').find((item) => item.includes('kepler_id')).split('=')[1];
-console.log('adaasdakeplerId', window.localStorage.getItem('carRentalCountry'))
+const keplerCookie = document.cookie.split(';').find((item) => item.includes('kepler_id'))
+const keplerId = keplerCookie ? keplerCookie.split('=')[1] : null
 const isTextId = urlParams.get('cmstextid');
 const isSsr = urlParams.get('type');
 // console.log('isGuestCheckout', isGuestCheckout, isLog, document.cookie);

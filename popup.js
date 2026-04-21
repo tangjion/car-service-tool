@@ -414,7 +414,7 @@ async function loadConfig() {
   const experimentSelect = document.getElementById('keplerIdSelect');
   const headerValueSelect = document.getElementById('headerValue');
   try {
-    const res = await fetch('http://www.xiaoqi.fan/config.json');
+    const res = await fetch('http://www.xiaoqi.fan/config.json', { cache: 'no-cache' });
     const { experiments, meshLane } = await res.json();
 
     // 填充 AB 实验
