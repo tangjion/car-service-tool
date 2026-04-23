@@ -25,29 +25,19 @@
 //     }
 //   }
 // );
-// 从 cookie 读取 transfer-user-residence 并设置选中状态
+// 从 httpOnly cookie klk-rdc 读取客源国并设置选中状态
 async function initSourceCountry() {
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) return;
-  
-  const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    function: getTransferUserResidenceFromCookie
-  });
-  
-  const raw = results && results[0] && results[0].result ? results[0].result : '';
-  const code = raw.startsWith('2_') ? raw.slice(2) : raw;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.url) return;
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
+  if (!reg.test(tab.url)) return;
+  const cookie = await chrome.cookies.get({ url: new URL(tab.url).origin, name: 'klk_rdc' });
+  const code = cookie ? cookie.value : '';
   if (code) {
     const el = document.getElementById(code);
     if (el) el.classList.add('active');
-    const sourceCodeInput = document.getElementById('sourceCode');
-    sourceCodeInput.value = code;
+    document.getElementById('sourceCode').value = code;
   }
-}
-
-function getTransferUserResidenceFromCookie() {
-  const match = document.cookie.match(/transfer-user-residence=([^;]+)/);
-  return match ? match[1] : '';
 }
 
 initSourceCountry();
@@ -142,62 +132,59 @@ chrome.storage.sync.get(['isSsr'], ({ isSsr }) => {
 //   }
 // });
 
-// 修改客源国
+// 修改客源国：写入 httpOnly 的 klk-rdc cookie（与 _pt 流程一致）
+async function writeKlkRdc(tab, code) {
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
+  if (!tab || !tab.url || !reg.test(tab.url)) {
+    alert('仅支持 Klook 域名');
+    return;
+  }
+  const url = new URL(tab.url);
+  await chrome.cookies.set({
+    url: url.origin,
+    name: 'klk_rdc',
+    value: code,
+    path: '/',
+    httpOnly: true,
+    secure: url.protocol === 'https:'
+  });
+  chrome.tabs.reload(tab.id);
+}
+
 let countryEle = document.querySelectorAll(".item-list li");
 let setSourceCode = document.getElementById('setSourceCode')
 for(let i = 0,len = countryEle.length; i < len; i++) {
   countryEle[i].addEventListener("click", async () => {
     const $this = countryEle[i]
-    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const sc = $this.getAttribute('id')
     let current = $this.parentElement.querySelector('.active');
     if (current && current !== $this) {
       current.classList.remove('active');
     }
     $this.classList.add('active')
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: changeSourceCountrysc,
-      args: [sc]
-    });
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: setKlkRdc,
-      args: [sc]
-    });
+    try {
+      await writeKlkRdc(tab, sc);
+    } catch (error) {
+      console.error('设置 klk-rdc cookie 失败:', error);
+      alert('设置 klk-rdc cookie 失败: ' + error.message);
+    }
   })
 }
 setSourceCode.addEventListener("click", async () => {
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  // 获取 客源国 输入框的值
-  const sourceCodeInput = document.getElementById('sourceCode');
-  const newSourceCode = sourceCodeInput.value;
-  if (newSourceCode) {
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: changeSourceCountrysc,
-      args: [newSourceCode, tab]
-    });
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: setKlkRdc,
-      args: [newSourceCode]
-    });
-  } else {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const newSourceCode = document.getElementById('sourceCode').value.trim();
+  if (!newSourceCode) {
     alert('请输入客源国');
+    return;
+  }
+  try {
+    await writeKlkRdc(tab, newSourceCode);
+  } catch (error) {
+    console.error('设置 klk-rdc cookie 失败:', error);
+    alert('设置 klk-rdc cookie 失败: ' + error.message);
   }
 });
-
-function changeSourceCountrysc(sc) {
-  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
-  const url = window.location.href
-  if(reg.test(url)){
-    // 设置 cookie 中的 transfer-user-residence 字段，有效期1天
-    const ONE_DAY = 86400;
-    document.cookie = `transfer-user-residence=2_${sc}; max-age=${ONE_DAY}; path=/;`;
-    window.location.reload();
-  }
-}
 
 // 开启iht日志
 let ihtBtn = document.getElementById('openIht')
@@ -495,6 +482,12 @@ generateHKIdBtn.addEventListener("click", async () => {
   generateHKID()
 })
 
+// 打开 JS2JSON 工具页
+let openJs2JsonBtn = document.getElementById('openJs2Json')
+openJs2JsonBtn.addEventListener("click", () => {
+  chrome.tabs.create({ url: 'https://llo85un5qepz.meoo.info/' });
+})
+
 // 设置请求头
 let setHeaderBtn = document.getElementById('setHeader')
 setHeaderBtn.addEventListener("click", async () => {
@@ -731,21 +724,6 @@ function openLogDebug(bool) {
       document.cookie = 'log-debug=test_car_rental; max-age=1800; path=/;';
     } else {
       document.cookie = 'log-debug=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    }
-    window.location.href = url
-  }
-}
-
-// 设置klk-rdc
-function setKlkRdc(code) {
-  console.log('000000')
-  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/
-  const url = window.location.href
-  const ONE_DAY = 86400 * 1000
-  if(reg.test(url)) {
-    if (code) {
-      // 在cookie中添加一个log-debug字段，值为test_car_rental,有效期为30分钟
-      document.cookie = `transfer-user-residence=2_${code}; max-age=${ONE_DAY}; path=/;`;
     }
     window.location.href = url
   }
