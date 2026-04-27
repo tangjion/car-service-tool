@@ -27,3 +27,16 @@ chrome.storage.sync.set({ keplerId: keplerId });
 chrome.storage.sync.set({ isLogDebug: isLog });
 chrome.storage.sync.set({ isReportLogDebug: isReportLog });
 chrome.storage.sync.set({ isSsr: isSsr });
+
+// ---------- Network+ : relay page-hook captures to background ----------
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  const data = event.data;
+  if (!data || data.__netplus !== true || data.tag !== 'NETPLUS_CAPTURE') return;
+  try {
+    chrome.runtime.sendMessage({ type: 'NETPLUS_CAPTURE', record: data.record });
+  } catch (_) {
+    // SW may be inactive momentarily during navigation; drop is acceptable here
+    // because page-hook keeps a local fallback via session storage if needed.
+  }
+});

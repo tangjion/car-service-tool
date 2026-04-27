@@ -42,8 +42,23 @@
         "https://*.klooktest.com/*",
         "http://localhost/*"
       ],
-      "js": ["content.js"]
+      "js": ["injected/page-hook.js"],
+      "world": "MAIN",
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://*.klook.com/*",
+        "https://*.klook.io/*",
+        "https://*.klooktest.com/*",
+        "http://localhost/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
     }
-  ]
+  ],
+  "devtools_page": "devtools/devtools.html"
   // "options_page": "options.html"
 }

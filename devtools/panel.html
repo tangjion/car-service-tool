@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Network+</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <div class="toolbar">
+      <label class="record"><input type="checkbox" id="recording" checked /> 录制</label>
+      <button id="clear" title="清空当前显示和 IndexedDB 中的所有记录">Clear</button>
+      <input id="filter" type="text" placeholder="过滤 URL ｜ 例：method:POST status:5.. -ping" />
+      <span class="types">
+        <label><input type="checkbox" data-type="xhr" checked /> XHR</label>
+        <label><input type="checkbox" data-type="fetch" checked /> Fetch</label>
+        <label><input type="checkbox" data-type="document" checked /> Doc</label>
+        <label><input type="checkbox" data-type="other" checked /> Other</label>
+      </span>
+      <button id="export-har">Export HAR</button>
+      <button id="export-json">Export JSON</button>
+      <span class="info" id="info">0 / 0</span>
+    </div>
+
+    <div class="split">
+      <div class="list" id="list">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-name">Name</th>
+              <th class="col-method">Method</th>
+              <th class="col-status">Status</th>
+              <th class="col-type">Type</th>
+              <th class="col-size">Size</th>
+              <th class="col-time">Time</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="empty" id="empty">尚未捕获任何请求。打开 DevTools → 切到本面板 → 操作页面后即可看到记录。</div>
+      </div>
+      <div class="detail" id="detail">
+        <div class="placeholder">点击左侧任一行查看详情</div>
+      </div>
+    </div>
+
+    <script type="module" src="panel.js"></script>
+  </body>
+</html>
