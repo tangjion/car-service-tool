@@ -429,7 +429,11 @@ async function loadConfig() {
     chrome.storage.sync.get(['customHeader'], ({ customHeader }) => {
       if (customHeader) {
         document.getElementById('headerName').value = customHeader.name || '';
-        headerValueSelect.value = customHeader.value || '';
+        const savedValue = customHeader.value || '';
+        document.getElementById('headerValueInput').value = savedValue;
+        // 仅在下拉中存在该选项时同步选中，否则保留为空（自定义值）
+        const hasOption = Array.from(headerValueSelect.options).some(o => o.value === savedValue);
+        headerValueSelect.value = hasOption ? savedValue : '';
       }
     });
   } catch (e) {
@@ -488,13 +492,25 @@ openJs2JsonBtn.addEventListener("click", () => {
   chrome.tabs.create({ url: 'https://llo85un5qepz.meoo.info/' });
 })
 
+// 下拉选择后回填到 value 输入框，作为快捷填充
+const headerValueSelectEl = document.getElementById('headerValue');
+const headerValueInputEl = document.getElementById('headerValueInput');
+headerValueSelectEl.addEventListener('change', (event) => {
+  const v = event.target.value;
+  if (v) headerValueInputEl.value = v;
+});
+
 // 设置请求头
 let setHeaderBtn = document.getElementById('setHeader')
 setHeaderBtn.addEventListener("click", async () => {
   const headerName = document.getElementById('headerName').value.trim();
-  const headerValue = document.getElementById('headerValue').value;
+  const headerValue = headerValueInputEl.value.trim();
   if (!headerName) {
     alert('请输入请求头名称');
+    return;
+  }
+  if (!headerValue) {
+    alert('请输入请求头值');
     return;
   }
   try {
@@ -511,7 +527,8 @@ let clearHeaderBtn = document.getElementById('clearHeader')
 clearHeaderBtn.addEventListener("click", async () => {
   await clearCustomHeader();
   document.getElementById('headerName').value = '';
-  document.getElementById('headerValue').value = '';
+  headerValueInputEl.value = '';
+  headerValueSelectEl.value = '';
   alert('请求头已清除');
 });
 
