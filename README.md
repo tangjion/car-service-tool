@@ -14,7 +14,7 @@
 
 | 模块 | 说明 |
 | --- | --- |
-| **CLIENT SOURCE** | 一键切换客源国，写入 httpOnly Cookie `klk_rdc` 并刷新当前 Tab；内置 CN/HK/TW/US/KR/TH/MY/JP/SG/AU/PH/NZ 等常用站点，可自定义国家代码。 |
+| **CLIENT SOURCE** | 一键切换客源国，写入 `localStorage.carRentalCountry` 并刷新当前 Tab；内置 CN/HK/TW/US/KR/TH/MY/JP/SG/AU/PH/NZ 等常用站点，可自定义国家代码。 |
 | **DEBUG FLAGS** | 7 个常用调试开关：<br>· `InHouseTracking` → `localStorage.__inhouse:debug`<br>· `Galileo Log` → `localStorage.__galileo_debug`<br>· `TextId Overlay` → URL 参数 `cmstextid=1`<br>· `Guest Checkout` → URL 参数 `util=guest_checkout`<br>· `Log Debug` → Cookie `log-debug=test_car_rental`（后端 30 分钟有效）<br>· `Report Log` → `localStorage.__clientReport:debug`<br>· `SSR Service` → `klooktest` 域名 URL 参数 `type=new`，用于切换 klook-new-web / ssr-carrental 服务 |
 | **TOOLS** | 快捷入口，目前内置打开 [JS2JSON](https://llo85un5qepz.meoo.info/) 转换工具。 |
 
@@ -86,7 +86,7 @@ car-service-tool/
 | 权限 | 用途 |
 | --- | --- |
 | `storage` | 存储调试开关状态、`_pt` 缓存、自定义请求头配置 |
-| `cookies` | 读写 `klk_rdc` / `_pt` 等 httpOnly Cookie |
+| `cookies` | 读写 `_pt` 等 httpOnly Cookie |
 | `tabs` + `activeTab` + `scripting` | 在当前 Tab 注入并执行调试脚本（切站点、切环境、刷新页面） |
 | `declarativeNetRequest` + `WithHostAccess` | 动态注入请求头（mesh lane 等） |
 | `host_permissions` | 限定能力作用域为 Klook 域名 + localhost + 远程配置 host |

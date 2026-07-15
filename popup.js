@@ -25,18 +25,30 @@
 //     }
 //   }
 // );
-// 从 httpOnly cookie klk-rdc 读取客源国并设置选中状态
+// 从 localStorage 的 carRentalCountry 字段读取客源国并设置选中状态
 async function initSourceCountry() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab || !tab.url) return;
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
   if (!reg.test(tab.url)) return;
-  const cookie = await chrome.cookies.get({ url: new URL(tab.url).origin, name: 'klk_rdc' });
-  const code = cookie ? cookie.value : '';
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: getCarRentalCountryFromLocalStorage
+  });
+  const code = results && results[0] && results[0].result ? results[0].result : '';
   if (code) {
     const el = document.getElementById(code);
     if (el) el.classList.add('active');
     document.getElementById('sourceCode').value = code;
+  }
+}
+
+function getCarRentalCountryFromLocalStorage() {
+  try {
+    const raw = window.localStorage.getItem('carRentalCountry');
+    return raw ? (JSON.parse(raw).localData || '') : '';
+  } catch (e) {
+    return '';
   }
 }
 
@@ -132,23 +144,26 @@ chrome.storage.sync.get(['isSsr'], ({ isSsr }) => {
 //   }
 // });
 
-// 修改客源国：写入 httpOnly 的 klk-rdc cookie（与 _pt 流程一致）
-async function writeKlkRdc(tab, code) {
+// 修改客源国：写入 localStorage 的 carRentalCountry 字段
+async function writeCarRentalCountry(tab, code) {
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
   if (!tab || !tab.url || !reg.test(tab.url)) {
     alert('仅支持 Klook 域名');
     return;
   }
-  const url = new URL(tab.url);
-  await chrome.cookies.set({
-    url: url.origin,
-    name: 'klk_rdc',
-    value: code,
-    path: '/',
-    httpOnly: true,
-    secure: url.protocol === 'https:'
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: changeSourceCountrysc,
+    args: [code]
   });
-  chrome.tabs.reload(tab.id);
+}
+
+function changeSourceCountrysc(sc) {
+  window.localStorage.setItem('carRentalCountry', JSON.stringify({
+    localData: sc,
+    expires: new Date().getTime() + 86400000
+  }));
+  window.location.reload();
 }
 
 let countryEle = document.querySelectorAll(".item-list li");
@@ -164,10 +179,10 @@ for(let i = 0,len = countryEle.length; i < len; i++) {
     }
     $this.classList.add('active')
     try {
-      await writeKlkRdc(tab, sc);
+      await writeCarRentalCountry(tab, sc);
     } catch (error) {
-      console.error('设置 klk-rdc cookie 失败:', error);
-      alert('设置 klk-rdc cookie 失败: ' + error.message);
+      console.error('设置 carRentalCountry 失败:', error);
+      alert('设置 carRentalCountry 失败: ' + error.message);
     }
   })
 }
@@ -179,10 +194,10 @@ setSourceCode.addEventListener("click", async () => {
     return;
   }
   try {
-    await writeKlkRdc(tab, newSourceCode);
+    await writeCarRentalCountry(tab, newSourceCode);
   } catch (error) {
-    console.error('设置 klk-rdc cookie 失败:', error);
-    alert('设置 klk-rdc cookie 失败: ' + error.message);
+    console.error('设置 carRentalCountry 失败:', error);
+    alert('设置 carRentalCountry 失败: ' + error.message);
   }
 });
 
