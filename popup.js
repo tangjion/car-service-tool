@@ -507,6 +507,27 @@ openJs2JsonBtn.addEventListener("click", () => {
   chrome.tabs.create({ url: 'https://llo85un5qepz.meoo.info/' });
 })
 
+// 测量模式：注入 measure.js（再次点击即关闭）
+let openMeasureBtn = document.getElementById('openMeasure')
+openMeasureBtn.addEventListener("click", async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
+  if (!tab || !tab.url || !reg.test(tab.url)) {
+    alert('仅支持 Klook 域名');
+    return;
+  }
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['measure.js']
+    });
+    window.close();
+  } catch (error) {
+    console.error('开启测量模式失败:', error);
+    alert('开启测量模式失败: ' + error.message);
+  }
+})
+
 // 下拉选择后回填到 value 输入框，作为快捷填充
 const headerValueSelectEl = document.getElementById('headerValue');
 const headerValueInputEl = document.getElementById('headerValueInput');
