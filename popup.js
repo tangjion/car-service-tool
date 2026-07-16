@@ -507,9 +507,8 @@ openJs2JsonBtn.addEventListener("click", () => {
   chrome.tabs.create({ url: 'https://llo85un5qepz.meoo.info/' });
 })
 
-// 测量模式：注入 measure.js（再次点击即关闭）
-let openMeasureBtn = document.getElementById('openMeasure')
-openMeasureBtn.addEventListener("click", async () => {
+// 测量模式 / 视觉对比：注入对应脚本（再次点击即关闭）
+async function injectTool(file, label) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
   if (!tab || !tab.url || !reg.test(tab.url)) {
@@ -519,14 +518,20 @@ openMeasureBtn.addEventListener("click", async () => {
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ['measure.js']
+      files: [file]
     });
     window.close();
   } catch (error) {
-    console.error('开启测量模式失败:', error);
-    alert('开启测量模式失败: ' + error.message);
+    console.error(`开启${label}失败:`, error);
+    alert(`开启${label}失败: ` + error.message);
   }
-})
+}
+
+let openMeasureBtn = document.getElementById('openMeasure')
+openMeasureBtn.addEventListener("click", () => injectTool('measure.js', '测量模式'))
+
+let openCompareBtn = document.getElementById('openCompare')
+openCompareBtn.addEventListener("click", () => injectTool('compare.js', '视觉对比'))
 
 // 下拉选择后回填到 value 输入框，作为快捷填充
 const headerValueSelectEl = document.getElementById('headerValue');

@@ -16,7 +16,7 @@
 | --- | --- |
 | **CLIENT SOURCE** | 一键切换客源国，写入 `localStorage.carRentalCountry` 并刷新当前 Tab；内置 CN/HK/TW/US/KR/TH/MY/JP/SG/AU/PH/NZ 等常用站点，可自定义国家代码。 |
 | **DEBUG FLAGS** | 7 个常用调试开关：<br>· `InHouseTracking` → `localStorage.__inhouse:debug`<br>· `Galileo Log` → `localStorage.__galileo_debug`<br>· `TextId Overlay` → URL 参数 `cmstextid=1`<br>· `Guest Checkout` → URL 参数 `util=guest_checkout`<br>· `Log Debug` → Cookie `log-debug=test_car_rental`（后端 30 分钟有效）<br>· `Report Log` → `localStorage.__clientReport:debug`<br>· `SSR Service` → `klooktest` 域名 URL 参数 `type=new`，用于切换 klook-new-web / ssr-carrental 服务 |
-| **TOOLS** | 快捷入口：<br>· [JS2JSON](https://llo85un5qepz.meoo.info/) 转换工具<br>· 测量模式：Figma 式页面标注，悬停看元素尺寸，点击锁定元素后悬停其他元素显示间距，同时右上角浮出 CSS Peeper 风格样式面板（字体/颜色/盒模型，点击行复制值），`↑`/`↓` 切换 DOM 层级，`Esc` 退出（再次点击按钮也可关闭）。 |
+| **TOOLS** | 快捷入口：<br>· [JS2JSON](https://llo85un5qepz.meoo.info/) 转换工具<br>· 测量模式：Figma 式页面标注，悬停看元素尺寸，点击锁定元素后悬停其他元素显示间距，同时右上角浮出 CSS Peeper 风格样式面板（字体/颜色/盒模型，点击行复制值），`↑`/`↓` 切换 DOM 层级，`Esc` 退出（再次点击按钮也可关闭）<br>· 视觉对比：把 Figma 设计稿截图叠在页面上走查还原度——Figma 里 Copy as PNG 后在页面 `Cmd/Ctrl+V` 粘贴（或拖入/导入文件），拖拽+方向键对齐（Shift 步进 10px），支持叠加透明度/差异高亮（像素一致处为黑）/左右分屏三种模式，2x 导出自动缩半，「穿透」可让鼠标穿过图片操作页面，`Esc` 退出。 |
 
 ### Popup · 右栏
 

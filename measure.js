@@ -5,6 +5,8 @@
     window.__carToolMeasure.destroy();
     return;
   }
+  // 与视觉对比模式互斥
+  if (window.__carToolCompare) window.__carToolCompare.destroy();
 
   const BLUE = '#18A0FB';
   const RED = '#F24822';
