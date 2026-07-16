@@ -20,12 +20,120 @@
   document.documentElement.appendChild(root);
 
   const tip = document.createElement('div');
-  tip.textContent = '测量模式 · 点击锁定元素 · ↑↓ 切换层级 · Esc 退出';
+  tip.textContent = '测量模式 · 点击锁定测距/看样式 · ↑↓ 切换层级 · Esc 退出';
   tip.style.cssText = `position:fixed;top:8px;left:50%;transform:translateX(-50%);background:rgba(30,30,30,.9);color:#fff;padding:4px 10px;border-radius:12px;pointer-events:none;z-index:${Z};font-size:11px;`;
   root.appendChild(tip);
 
   const layer = document.createElement('div');
   root.appendChild(layer);
+
+  // 样式面板（CSS Peeper 风格）：锁定元素时显示，可交互（点击行复制值）
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed;top:44px;right:16px;width:250px;max-height:calc(100vh - 64px);overflow:auto;background:#fff;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.18);pointer-events:auto;display:none;color:#2c2c2c;text-align:left;';
+  root.appendChild(panel);
+  let panelEl = null; // 面板当前展示的元素，避免每帧重建
+
+  function toHex(cssColor) {
+    const m = cssColor.match(/rgba?\(([^)]+)\)/);
+    if (!m) return cssColor;
+    const parts = m[1].split(',').map(parseFloat);
+    const a = parts.length > 3 ? parts[3] : 1;
+    const hex = '#' + parts.slice(0, 3).map(n => Math.round(n).toString(16).padStart(2, '0')).join('').toUpperCase();
+    return a < 1 ? `${hex} ${Math.round(a * 100)}%` : hex;
+  }
+
+  function isTransparent(c) {
+    return c === 'transparent' || /rgba\([^)]+,\s*0\)$/.test(c);
+  }
+
+  // 四边值缩写：全 0 返回 null，全相等返回单值
+  function sides(cs, base) {
+    const vals = ['Top', 'Right', 'Bottom', 'Left'].map(s => Math.round(parseFloat(cs[base + s]) || 0));
+    if (vals.every(v => v === 0)) return null;
+    if (vals.every(v => v === vals[0])) return `${vals[0]}px`;
+    return vals.join(' ');
+  }
+
+  function panelSection(title) {
+    const sec = document.createElement('div');
+    sec.style.cssText = 'padding:10px 14px;border-top:1px solid #f0f0f0;';
+    const h = document.createElement('div');
+    h.textContent = title;
+    h.style.cssText = 'font-size:9px;font-weight:600;letter-spacing:.14em;color:#9b9b9b;text-transform:uppercase;margin-bottom:6px;';
+    sec.appendChild(h);
+    panel.appendChild(sec);
+    return sec;
+  }
+
+  function panelRow(sec, label, value, swatch) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0;font-size:12px;cursor:pointer;';
+    const l = document.createElement('span');
+    l.textContent = label;
+    l.style.cssText = 'color:#8a8a8a;flex-shrink:0;';
+    const v = document.createElement('span');
+    v.style.cssText = 'color:#2c2c2c;font-weight:500;display:inline-flex;align-items:center;gap:6px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    if (swatch) {
+      const dot = document.createElement('span');
+      dot.style.cssText = `width:13px;height:13px;border-radius:50%;background:${swatch};border:1px solid rgba(0,0,0,.12);flex-shrink:0;`;
+      v.appendChild(dot);
+    }
+    v.appendChild(document.createTextNode(value));
+    row.appendChild(l);
+    row.appendChild(v);
+    // 点击复制值，标签短暂变为 Copied
+    row.addEventListener('click', () => {
+      navigator.clipboard && navigator.clipboard.writeText(value).catch(() => {});
+      const old = l.textContent;
+      l.textContent = 'Copied!';
+      l.style.color = '#18A0FB';
+      setTimeout(() => { l.textContent = old; l.style.color = '#8a8a8a'; }, 800);
+    });
+    sec.appendChild(row);
+  }
+
+  function buildPanel(el) {
+    panel.textContent = '';
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+
+    const header = document.createElement('div');
+    header.style.cssText = 'padding:12px 14px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;';
+    const name = document.createElement('span');
+    name.textContent = el.tagName.toLowerCase() + (el.classList.length ? '.' + el.classList[0] : '');
+    name.style.cssText = 'font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    const dims = document.createElement('span');
+    dims.textContent = `${Math.round(r.width)} × ${Math.round(r.height)}`;
+    dims.style.cssText = 'font-size:11px;color:#9b9b9b;flex-shrink:0;';
+    header.appendChild(name);
+    header.appendChild(dims);
+    panel.appendChild(header);
+
+    const typo = panelSection('Typography');
+    const family = cs.fontFamily.split(',')[0].replace(/["']/g, '').trim();
+    panelRow(typo, 'Font', family);
+    panelRow(typo, 'Size', cs.fontSize);
+    panelRow(typo, 'Weight', cs.fontWeight);
+    panelRow(typo, 'Line height', cs.lineHeight);
+
+    const colors = panelSection('Colors');
+    panelRow(colors, 'Text', toHex(cs.color), cs.color);
+    if (!isTransparent(cs.backgroundColor)) {
+      panelRow(colors, 'Background', toHex(cs.backgroundColor), cs.backgroundColor);
+    }
+    if (parseFloat(cs.borderTopWidth) > 0) {
+      panelRow(colors, 'Border', `${cs.borderTopWidth} ${toHex(cs.borderTopColor)}`, cs.borderTopColor);
+    }
+
+    const box = panelSection('Box');
+    const pad = sides(cs, 'padding');
+    if (pad) panelRow(box, 'Padding', pad);
+    const mar = sides(cs, 'margin');
+    if (mar) panelRow(box, 'Margin', mar);
+    if (parseFloat(cs.borderTopLeftRadius) > 0) panelRow(box, 'Radius', cs.borderTopLeftRadius);
+    if (cs.boxShadow && cs.boxShadow !== 'none') panelRow(box, 'Shadow', cs.boxShadow);
+    if (!box.querySelector('div + div')) box.remove(); // 没有任何行就整段去掉
+  }
 
   function box(rect, color, dashed) {
     const d = document.createElement('div');
@@ -94,6 +202,12 @@
     if (selEl && !selEl.isConnected) selEl = null;
     if (hoverEl && !hoverEl.isConnected) { hoverEl = null; descendStack = []; }
 
+    if (selEl !== panelEl) {
+      panelEl = selEl;
+      if (selEl) buildPanel(selEl);
+    }
+    panel.style.display = selEl ? 'block' : 'none';
+
     if (selEl) {
       const a = selEl.getBoundingClientRect();
       box(a, BLUE);
@@ -134,6 +248,7 @@
   // 测量模式下拦截页面点击：点击只用于锁定元素
   // 用点击坐标重新取元素，避免键盘/程序化移动后 hoverEl 过期
   function onClick(e) {
+    if (root.contains(e.target)) return; // 面板内部的点击（复制）放行
     e.preventDefault();
     e.stopImmediatePropagation();
     if (e.type !== 'click') return;
