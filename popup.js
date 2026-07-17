@@ -411,13 +411,48 @@ function changeReportLog(bool) {
   }
 }
 
-// 从远程配置文件加载实验列表和 meshLane
+// 语义化版本比较：remote 比 local 新返回 true
+function isNewerVersion(remote, local) {
+  const a = String(remote || '').split('.').map(Number);
+  const b = String(local || '').split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const d = (a[i] || 0) - (b[i] || 0);
+    if (d) return d > 0;
+  }
+  return false;
+}
+
+// 检查更新：本地 config.json 是当前版本，远程 config.json 是最新版本
+function checkUpdate(localUpdate, remoteUpdate) {
+  if (localUpdate && localUpdate.version) {
+    document.querySelector('.header-version').textContent = 'v' + localUpdate.version;
+  }
+  if (!remoteUpdate || !isNewerVersion(remoteUpdate.version, localUpdate && localUpdate.version)) return;
+  const banner = document.getElementById('updateBanner');
+  banner.textContent = `🆕 发现新版本 v${remoteUpdate.version}，点击下载安装包`;
+  banner.style.display = 'block';
+  banner.addEventListener('click', () => {
+    const url = remoteUpdate.downloadUrl || (localUpdate && localUpdate.downloadUrl);
+    if (url) chrome.tabs.create({ url });
+  });
+}
+
+// 从远程配置文件加载实验列表和 meshLane，并比对版本提示更新
 async function loadConfig() {
   const experimentSelect = document.getElementById('keplerIdSelect');
   const headerValueSelect = document.getElementById('headerValue');
+  let localUpdate = null;
+  try {
+    const localRes = await fetch(chrome.runtime.getURL('config.json'));
+    localUpdate = (await localRes.json()).update;
+  } catch (e) {
+    console.error('Failed to load local config.json:', e);
+  }
   try {
     const res = await fetch('http://www.xiaoqi.fan/config.json', { cache: 'no-cache' });
-    const { experiments, meshLane } = await res.json();
+    const remoteConfig = await res.json();
+    const { experiments, meshLane } = remoteConfig;
+    checkUpdate(localUpdate, remoteConfig.update);
 
     // 填充 AB 实验
     for (const { group, variants } of experiments) {

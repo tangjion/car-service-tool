@@ -91,6 +91,12 @@ car-service-tool/
 | `declarativeNetRequest` + `WithHostAccess` | 动态注入请求头（mesh lane 等） |
 | `host_permissions` | 限定能力作用域为 Klook 域名 + localhost + 远程配置 host |
 
+## 版本更新
+
+插件打开时会用本地 `config.json` 的 `update.version` 与远程（`http://www.xiaoqi.fan/config.json`）比对，发现新版本时 popup 顶部显示橙色提示条，点击打开 `update.downloadUrl` 下载安装包，解压覆盖本地目录后在 `chrome://extensions` 点刷新即完成更新。
+
+**发版流程**：改动完成后 → 把本地 `config.json` 的 `update.version` 号 +1 → 打包 zip 上传 → 把新的 `config.json` 也上传到远程覆盖 → 同事下次打开 popup 即收到提示。
+
 ## 常见使用场景
 
 - **复现线上 Bug**：切到目标客源国 → 设置 mesh lane → 粘贴线上 `_pt` 登录态，几步完成现场还原。

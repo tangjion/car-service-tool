@@ -391,3 +391,20 @@ body {
   white-space: nowrap;
   padding: 5px 8px;
 }
+
+/* ── Update banner ───────────────────────────────────────── */
+.update-banner {
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.update-banner:hover {
+  filter: brightness(1.1);
+}
