@@ -568,6 +568,143 @@ openMeasureBtn.addEventListener("click", () => injectTool('measure.js', '测量�
 let openCompareBtn = document.getElementById('openCompare')
 openCompareBtn.addEventListener("click", () => injectTool('compare.js', '视觉对比'))
 
+// ── Booking 表单一键填充：启发式识别字段，灌入随机测试数据 ──────
+function genBookingTestData() {
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  return {
+    firstName: 'test',
+    lastName: 'klook',
+    fullName: 'klook test',
+    email: 'jun.tang@klook.com',
+    phone: '15801848027',
+    flight: pick(['CX880', 'HX606', 'KA232', 'MU505', 'SQ861']),
+    age: '30',
+    passport: 'E' + (Math.floor(Math.random() * 90000000) + 10000000),
+    hkid: genHKIDValue(),
+    dob: '1990-01-01'
+  };
+}
+
+// 注入页面执行：填充可见的空白表单字段（支付卡号在收单 iframe 内，不涉及）
+function fillBookingForm(data) {
+  // 顺序即优先级：email/tel/date 靠 type 精确命中，其余按文案匹配，先具体后泛化。
+  // ph 是 placeholder 特征兜底：标签不是 <label> 时文案可能取不到，但占位格式本身是强信号。
+  // hkid 必须排在 passport 前：「HK ID number」也能命中 passport 的 id.?number
+  const rules = [
+    { key: 'email', type: 'email', re: /e-?mail|邮箱/i },
+    { key: 'phone', type: 'tel', re: /phone|mobile|手机|电话/i },
+    { key: 'hkid', re: /hk.?id|hkid|香港身份证/i, ph: /^[a-z]\d{6}\(\d\)$/i },
+    { key: 'dob', type: 'date', re: /birth|生日|出生/i, ph: /\d{4}年\d{1,2}月|yyyy|dd\/mm|mm\/dd/i },
+    { key: 'lastName', re: /last.?name|family.?name|surname|姓氏|^姓$/i },
+    { key: 'firstName', re: /first.?name|given.?name|名字|^名$/i },
+    { key: 'fullName', re: /full.?name|姓名/i },
+    { key: 'flight', re: /flight|航班/i },
+    { key: 'age', re: /\bage\b|年龄/i },
+    { key: 'passport', re: /passport|护照|证件号|id.?number/i }
+  ];
+
+  // React/Vue 受控输入必须走原生 setter 再派发事件，框架才能感知
+  const setVal = (el, value) => {
+    const proto = el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement : window.HTMLInputElement;
+    Object.getOwnPropertyDescriptor(proto.prototype, 'value').set.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const labelText = (el) => {
+    let t = '';
+    try {
+      if (el.id) {
+        const l = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        if (l) t += ' ' + l.textContent;
+      }
+      const lb = el.getAttribute('aria-labelledby');
+      if (lb) {
+        lb.split(/\s+/).forEach((id) => {
+          const n = document.getElementById(id);
+          if (n) t += ' ' + n.textContent;
+        });
+      }
+      const wrap = el.closest('label');
+      if (wrap) t += ' ' + wrap.textContent;
+      // 组件库表单常用 div 当标签：向上找「只含这一个输入框」的最外层容器，取其文案
+      let node = el.parentElement;
+      let container = null;
+      for (let i = 0; i < 3 && node && node !== document.body; i++) {
+        if (node.querySelectorAll('input, textarea, select').length !== 1) break;
+        container = node;
+        node = node.parentElement;
+      }
+      if (container) t += ' ' + (container.innerText || container.textContent || '').slice(0, 80);
+    } catch (e) {}
+    return t;
+  };
+
+  let filled = 0;
+  const inputs = [...document.querySelectorAll('input, textarea')].filter((el) =>
+    !el.disabled && !el.readOnly && el.offsetParent !== null && !el.value &&
+    !['hidden', 'checkbox', 'radio', 'file', 'submit', 'button', 'password'].includes(el.type)
+  );
+  for (const el of inputs) {
+    const hay = [el.name, el.id, el.placeholder, el.getAttribute('aria-label'), el.getAttribute('autocomplete'), labelText(el)].join(' ');
+    const rule = rules.find((r) =>
+      (r.type && el.type === r.type) || r.re.test(hay) || (r.ph && r.ph.test(el.placeholder || ''))
+    );
+    if (rule && data[rule.key]) {
+      let value = data[rule.key];
+      // 出生日期按占位符推断期望格式
+      if (rule.key === 'dob' && el.type !== 'date') {
+        const ph = el.placeholder || '';
+        if (/年/.test(ph)) value = '1990年1月1日';
+        else if (/\//.test(ph)) value = '1990/01/01';
+      }
+      setVal(el, value);
+      filled++;
+    }
+  }
+
+  // 称谓下拉：选第一个 Mr/Ms/先生/女士 选项
+  for (const sel of document.querySelectorAll('select')) {
+    if (sel.disabled || sel.offsetParent === null || sel.selectedIndex > 0) continue;
+    const opt = [...sel.options].find((o) => o.value && /(^|\b)(mr|mrs|ms)\b|先生|女士/i.test(o.textContent));
+    if (opt) {
+      Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set.call(sel, opt.value);
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      filled++;
+    }
+  }
+
+  // 页面右下角结果提示
+  const tip = document.createElement('div');
+  tip.textContent = filled ? `已填充 ${filled} 个字段（测试数据）` : '未找到可填充的表单字段';
+  tip.style.cssText = 'position:fixed;right:16px;bottom:16px;background:rgba(30,30,30,.92);color:#fff;padding:8px 14px;border-radius:8px;z-index:2147483647;font:12px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;';
+  document.documentElement.appendChild(tip);
+  setTimeout(() => tip.remove(), 2500);
+  return filled;
+}
+
+document.getElementById('fillBookingForm').addEventListener('click', async function () {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
+  if (!tab || !tab.url || !reg.test(tab.url)) {
+    alert('仅支持 Klook 域名');
+    return;
+  }
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      function: fillBookingForm,
+      args: [genBookingTestData()]
+    });
+    const count = results && results[0] ? results[0].result : 0;
+    this.textContent = count ? `FILLED ×${count}!` : 'NO FIELDS';
+    setTimeout(() => { this.textContent = 'FILL BOOKING FORM'; }, 1500);
+  } catch (error) {
+    console.error('填充表单失败:', error);
+    alert('填充表单失败: ' + error.message);
+  }
+});
+
 // ── 环境快照：采集/还原调试环境，bug 流转时一键对齐现场 ──────
 // 快照包含：URL、客源国、实验组、mesh header、日志开关；明确不含 _pt 登录态
 const SNAPSHOT_MARK = 'CARTOOL-SNAPSHOT:';
@@ -934,18 +1071,20 @@ async function clearCustomHeader() {
 
 // 请求头初始化已移入 loadConfig()，在 meshLane 选项渲染后执行
 
-function generateHKID() {
-  // 生成第一个字母（通常是Z）
+// 生成合法校验位的香港身份证号（纯函数，表单填充也会复用）
+function genHKIDValue() {
+  // 第一个字母通常是Z，第二个字母用Q-U作为示例
   const firstLetter = 'Z';
-  // 生成第二个字母（这里我们用Q-U作为示例）
   const secondLetters = ['Q', 'R', 'S', 'T', 'U'];
   const secondLetter = secondLetters[Math.floor(Math.random() * secondLetters.length)];
-  // 生成6位随机数字
   const numbers = Array.from({length: 6}, () => Math.floor(Math.random() * 10)).join('');
-  // 计算校验码
   const checkDigit = calculateCheckDigit(firstLetter, secondLetter, numbers);
+  return `${firstLetter}${secondLetter}${numbers}(${checkDigit})`;
+}
+
+function generateHKID() {
   const hkId = document.getElementById('hkId');
-  const value = `${firstLetter}${secondLetter}${numbers}(${checkDigit})`;
+  const value = genHKIDValue();
   hkId.value = value
   // 将香港身份证号码复制到剪贴板
   try {
