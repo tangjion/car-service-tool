@@ -408,3 +408,22 @@ body {
 .update-banner:hover {
   filter: brightness(1.1);
 }
+
+/* ── Env snapshot ────────────────────────────────────────── */
+.snapshot-text {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-mid);
+  border-radius: 4px;
+  padding: 5px 7px;
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.snapshot-text::placeholder {
+  color: var(--text-dim);
+}

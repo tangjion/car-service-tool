@@ -568,6 +568,218 @@ openMeasureBtn.addEventListener("click", () => injectTool('measure.js', '测量�
 let openCompareBtn = document.getElementById('openCompare')
 openCompareBtn.addEventListener("click", () => injectTool('compare.js', '视觉对比'))
 
+// ── 环境快照：采集/还原调试环境，bug 流转时一键对齐现场 ──────
+// 快照包含：URL、客源国、实验组、mesh header、日志开关；明确不含 _pt 登录态
+const SNAPSHOT_MARK = 'CARTOOL-SNAPSHOT:';
+const snapshotTextEl = document.getElementById('snapshotText');
+const snapshotPresetsEl = document.getElementById('snapshotPresets');
+
+// 注入页面执行：采集页面侧状态
+function collectPageState() {
+  const g = (k) => { try { return window.localStorage.getItem(k); } catch (e) { return null; } };
+  let country = '';
+  try { country = JSON.parse(g('carRentalCountry')).localData || ''; } catch (e) {}
+  const cookieVal = (n) => (document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]+)')) || [])[1] || '';
+  return {
+    url: location.href,
+    country,
+    kepler: cookieVal('kepler_id'),
+    logDebug: cookieVal('log-debug') === 'test_car_rental',
+    iht: g('__inhouse:debug') === 'true',
+    galileo: g('__galileo_debug') === 'debug',
+    report: g('__clientReport:debug') === 'true'
+  };
+}
+
+// 注入页面执行：回灌页面侧状态（不含 URL 导航，由调用方处理）
+function applyPageState(s) {
+  if (s.country) {
+    window.localStorage.setItem('carRentalCountry', JSON.stringify({ localData: s.country, expires: new Date().getTime() + 86400000 }));
+  }
+  window.localStorage.setItem('__inhouse:debug', String(!!s.iht));
+  window.localStorage.setItem('__galileo_debug', s.galileo ? 'debug' : '');
+  window.localStorage.setItem('__clientReport:debug', String(!!s.report));
+  document.cookie = s.kepler
+    ? `kepler_id=${s.kepler}; max-age=1800; path=/;`
+    : 'kepler_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  document.cookie = s.logDebug
+    ? 'log-debug=test_car_rental; max-age=1800; path=/;'
+    : 'log-debug=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+}
+
+function encodeSnapshot(snap) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(snap))));
+}
+
+function decodeSnapshot(text) {
+  const m = String(text).match(/CARTOOL-SNAPSHOT:([A-Za-z0-9+/=]+)/);
+  if (!m) return null;
+  try { return JSON.parse(decodeURIComponent(escape(atob(m[1])))); } catch (e) { return null; }
+}
+
+function snapshotToText(snap) {
+  const flags = [
+    snap.iht && 'iht', snap.galileo && 'galileo',
+    snap.report && 'report', snap.logDebug && 'log-debug'
+  ].filter(Boolean).join(' / ') || '无';
+  return [
+    '【Car Tool 环境快照】',
+    `页面: ${snap.url}`,
+    `客源国: ${snap.country || '未设置'}`,
+    `实验组: ${snap.kepler || '无'}`,
+    `Mesh: ${snap.header ? `${snap.header.name}=${snap.header.value}` : '无'}`,
+    `日志开关: ${flags}`,
+    `时间: ${snap.ts}`,
+    '（不含 _pt 登录态，如需请自行同步）',
+    SNAPSHOT_MARK + encodeSnapshot(snap)
+  ].join('\n');
+}
+
+async function buildSnapshot() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const reg = /^(https:\/\/.+\.klook.+\/)|localhost/;
+  if (!tab || !tab.url || !reg.test(tab.url)) {
+    alert('仅支持 Klook 域名');
+    return null;
+  }
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: collectPageState
+  });
+  const snap = (results && results[0] && results[0].result) || {};
+  const { customHeader } = await chrome.storage.sync.get(['customHeader']);
+  snap.v = 1;
+  snap.header = customHeader && customHeader.name ? customHeader : null;
+  snap.ts = new Date().toLocaleString('zh-CN', { hour12: false });
+  return snap;
+}
+
+// 等待 tab 加载完成（跨域还原时需先导航到目标页再注入）
+function navigateAndWait(tabId, url) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, 15000);
+    function done() {
+      clearTimeout(timer);
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    }
+    function listener(id, info) {
+      if (id === tabId && info.status === 'complete') done();
+    }
+    chrome.tabs.onUpdated.addListener(listener);
+    chrome.tabs.update(tabId, { url });
+  });
+}
+
+async function applySnapshotToTab(snap) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) return;
+  // 1. mesh header 是全局配置，先行生效
+  if (snap.header && snap.header.name) {
+    await setCustomHeader(snap.header.name, snap.header.value);
+  } else {
+    await clearCustomHeader();
+  }
+  // 2. 页面态注入：跨域时先导航到目标页
+  let sameOrigin = false;
+  try { sameOrigin = new URL(tab.url).origin === new URL(snap.url).origin; } catch (e) {}
+  if (!sameOrigin) {
+    await navigateAndWait(tab.id, snap.url);
+  }
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    function: applyPageState,
+    args: [snap]
+  });
+  // 3. 让设置生效：同域且 URL 不同则导航（顺带带上 URL 参数），否则刷新
+  if (sameOrigin && tab.url !== snap.url) {
+    chrome.tabs.update(tab.id, { url: snap.url });
+  } else {
+    chrome.tabs.reload(tab.id);
+  }
+}
+
+document.getElementById('copySnapshot').addEventListener('click', async function () {
+  try {
+    const snap = await buildSnapshot();
+    if (!snap) return;
+    const text = snapshotToText(snap);
+    snapshotTextEl.value = text;
+    await navigator.clipboard.writeText(text);
+    this.textContent = 'COPIED!';
+    setTimeout(() => { this.textContent = 'COPY ENV'; }, 1200);
+  } catch (error) {
+    console.error('采集环境快照失败:', error);
+    alert('采集环境快照失败: ' + error.message);
+  }
+});
+
+document.getElementById('applySnapshot').addEventListener('click', async function () {
+  const snap = decodeSnapshot(snapshotTextEl.value);
+  if (!snap) {
+    alert('未识别到快照，请完整粘贴含 CARTOOL-SNAPSHOT 的内容');
+    return;
+  }
+  try {
+    this.textContent = 'APPLYING...';
+    await applySnapshotToTab(snap);
+    this.textContent = 'DONE!';
+    setTimeout(() => { this.textContent = 'APPLY'; }, 1200);
+  } catch (error) {
+    console.error('还原环境失败:', error);
+    alert('还原环境失败: ' + error.message);
+    this.textContent = 'APPLY';
+  }
+});
+
+// ── 快照预设：常用场景收藏夹（chrome.storage.local）──────────
+async function loadSnapshotPresets() {
+  const { snapshotPresets = [] } = await chrome.storage.local.get(['snapshotPresets']);
+  while (snapshotPresetsEl.options.length > 1) snapshotPresetsEl.remove(1);
+  for (const p of snapshotPresets) {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    opt.textContent = p.name;
+    snapshotPresetsEl.appendChild(opt);
+  }
+}
+loadSnapshotPresets();
+
+snapshotPresetsEl.addEventListener('change', async () => {
+  const { snapshotPresets = [] } = await chrome.storage.local.get(['snapshotPresets']);
+  const p = snapshotPresets.find((it) => it.name === snapshotPresetsEl.value);
+  if (p) snapshotTextEl.value = p.text;
+});
+
+document.getElementById('savePreset').addEventListener('click', async () => {
+  const text = snapshotTextEl.value;
+  if (!decodeSnapshot(text)) {
+    alert('先 COPY ENV 或粘贴一份有效快照，再保存为预设');
+    return;
+  }
+  let name = null;
+  try { name = window.prompt('预设名称：', ''); } catch (e) {}
+  if (name === null) return; // 用户取消
+  name = (name || '').trim() || `快照 ${new Date().toLocaleString('zh-CN', { hour12: false })}`;
+  const { snapshotPresets = [] } = await chrome.storage.local.get(['snapshotPresets']);
+  const next = snapshotPresets.filter((it) => it.name !== name);
+  next.push({ name, text });
+  await chrome.storage.local.set({ snapshotPresets: next });
+  await loadSnapshotPresets();
+  snapshotPresetsEl.value = name;
+});
+
+document.getElementById('deletePreset').addEventListener('click', async () => {
+  const name = snapshotPresetsEl.value;
+  if (!name) {
+    alert('先在下拉中选择要删除的预设');
+    return;
+  }
+  const { snapshotPresets = [] } = await chrome.storage.local.get(['snapshotPresets']);
+  await chrome.storage.local.set({ snapshotPresets: snapshotPresets.filter((it) => it.name !== name) });
+  await loadSnapshotPresets();
+});
+
 // 下拉选择后回填到 value 输入框，作为快捷填充
 const headerValueSelectEl = document.getElementById('headerValue');
 const headerValueInputEl = document.getElementById('headerValueInput');

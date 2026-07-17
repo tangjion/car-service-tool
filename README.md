@@ -91,6 +91,13 @@ car-service-tool/
 | `declarativeNetRequest` + `WithHostAccess` | 动态注入请求头（mesh lane 等） |
 | `host_permissions` | 限定能力作用域为 Klook 域名 + localhost + 远程配置 host |
 
+## 环境快照（ENV SNAPSHOT）
+
+bug 流转时一键对齐环境：QA 点 **COPY ENV** 采集当前页面的完整环境（URL、客源国、实验组、mesh lane、日志开关）为一段文本，贴进 bug 单或 Lark 群；开发把这段文本粘进插件点 **APPLY**，自动设置 mesh header、导航到目标页面并回灌客源国/实验组/日志开关，刷新后环境完全一致。
+
+- 快照明确**不包含 `_pt` 登录态**（登录凭证不应明文流转），需要时自行同步。
+- 常用场景可 **SAVE** 为命名预设，下拉一选、APPLY 一点即达。
+
 ## 版本更新
 
 插件打开时会用本地 `config.json` 的 `update.version` 与远程（`http://www.xiaoqi.fan/config.json`）比对，发现新版本时 popup 顶部显示橙色提示条，点击打开 `update.downloadUrl` 下载安装包，解压覆盖本地目录后在 `chrome://extensions` 点刷新即完成更新。

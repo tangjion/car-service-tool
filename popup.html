@@ -46,6 +46,28 @@
           </div>
         </div>
 
+        <!-- Env Snapshot -->
+        <div class="tool-item">
+          <p class="item-title">
+            <img src="images/closed.png" width="12">
+            <span>ENV SNAPSHOT</span>
+          </p>
+          <div class="item-input">
+            <textarea id="snapshotText" class="snapshot-text" rows="4" placeholder="COPY ENV 采集当前环境贴给同事；或粘贴同事的快照后点 APPLY 一键还原"></textarea>
+            <div class="item-btn-wrap">
+              <div id="copySnapshot" class="item-btn">COPY ENV</div>
+              <div id="applySnapshot" class="item-btn">APPLY</div>
+            </div>
+            <select id="snapshotPresets">
+              <option value="">-- saved presets --</option>
+            </select>
+            <div class="item-btn-wrap">
+              <div id="savePreset" class="item-btn">SAVE</div>
+              <div id="deletePreset" class="item-btn">DELETE</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Debug Flags -->
         <div class="tool-item toggles-group">
           <div class="item-title">
